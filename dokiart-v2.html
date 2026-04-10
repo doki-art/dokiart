@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nina Prisniak — dokiart</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400;1,500&family=JetBrains+Mono:wght@300;400&family=Jost:wght@300;400&display=swap" rel="stylesheet">
+
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --black:  #0C0C0C;
+  --white:  #F8F6F3;
+  --red:    #D94F38;
+  --gray:   #999;
+  --border: #E8E5E0;
+  --border-dark: rgba(248,246,243,.08);
+  --serif:  'Playfair Display', Georgia, serif;
+  --mono:   'JetBrains Mono', monospace;
+  --sans:   'Jost', sans-serif;
+}
+
+html { font-size: 16px; }
+body {
+  background: var(--black);
+  color: var(--white);
+  font-family: var(--sans);
+  font-weight: 300;
+  cursor: none;
+  overflow-x: hidden;
+}
+
+/* ── CURSOR ── */
+#cur {
+  position: fixed;
+  width: 6px; height: 6px;
+  background: var(--red);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%,-50%);
+  transition: width .2s ease, height .2s ease, background .2s ease;
+}
+#cur.hover {
+  width: 32px; height: 32px;
+  background: transparent;
+  border: 1px solid rgba(217,79,56,.5);
+}
+
+/* ── NAV ── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0;
+  z-index: 100;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 28px 52px;
+}
+.nl {
+  font-family: var(--mono);
+  font-size: .62rem;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: rgba(248,246,243,.35);
+  text-decoration: none;
+  cursor: none;
+  transition: color .25s;
+}
+.nl:hover { color: var(--white); }
+.nl.on { color: var(--red); }
+.nav-links { display: flex; gap: 40px; }
+
+/* ── HERO ── */
+.hero {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+#hc {
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+}
+.hero-text {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  pointer-events: none;
+  max-width: 800px;
+  padding: 0 40px;
+}
+.hero-eyebrow {
+  font-family: var(--mono);
+  font-size: .6rem;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: rgba(248,246,243,.28);
+  margin-bottom: 28px;
+}
+.hero-headline {
+  font-family: var(--serif);
+  font-size: clamp(2.2rem, 4vw, 3.8rem);
+  font-weight: 400;
+  letter-spacing: -.01em;
+  line-height: 1.1;
+  color: var(--white);
+  margin-bottom: 28px;
+}
+.hero-headline em {
+  font-style: italic;
+  color: rgba(248,246,243,.45);
+}
+
+/* Toggle */
+.toggle-wrap {
+  pointer-events: all;
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  border: 1px solid rgba(248,246,243,.12);
+  margin-bottom: 32px;
+  position: relative;
+}
+.toggle-btn {
+  padding: 9px 22px;
+  font-family: var(--mono);
+  font-size: .58rem;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: rgba(248,246,243,.3);
+  background: transparent;
+  border: none;
+  cursor: none;
+  transition: color .2s;
+  position: relative;
+  z-index: 1;
+}
+.toggle-btn.active { color: var(--white); }
+.toggle-slider {
+  position: absolute;
+  top: 0; left: 0;
+  height: 100%;
+  width: 50%;
+  background: rgba(248,246,243,.06);
+  transition: transform .25s ease;
+  pointer-events: none;
+}
+.toggle-wrap.right .toggle-slider { transform: translateX(100%); }
+
+/* Subline swap */
+.hero-sub {
+  font-size: .92rem;
+  line-height: 1.85;
+  color: rgba(248,246,243,.45);
+  max-width: 560px;
+  margin: 0 auto 36px;
+  min-height: 3.5em;
+  transition: opacity .2s;
+}
+.hero-sub span { display: none; }
+.hero-sub span.visible { display: block; }
+
+.hero-cta {
+  pointer-events: all;
+  display: inline-block;
+  padding: 13px 32px;
+  border: 1px solid rgba(217,79,56,.5);
+  font-family: var(--mono);
+  font-size: .6rem;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--red);
+  text-decoration: none;
+  cursor: none;
+  transition: all .2s;
+}
+.hero-cta:hover {
+  background: var(--red);
+  color: var(--white);
+  border-color: var(--red);
+}
+
+.scroll-hint {
+  position: absolute;
+  bottom: 40px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  font-family: var(--mono);
+  font-size: .58rem;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: rgba(248,246,243,.2);
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+}
+.scroll-line {
+  width: 1px; height: 32px;
+  background: linear-gradient(to bottom, rgba(248,246,243,.2), transparent);
+  animation: scrollpulse 2s ease infinite;
+}
+@keyframes scrollpulse { 0%,100%{opacity:.3} 50%{opacity:.8} }
+
+/* ── LOWER (white sections) ── */
+.lower { background: var(--white); color: var(--black); }
+
+/* ── SECTION SHARED ── */
+.section-tag {
+  font-family: var(--mono);
+  font-size: .6rem;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--gray);
+}
+
+/* ── CREDIBILITY ── */
+.cred {
+  padding: 80px 52px;
+  border-bottom: 1px solid var(--border);
+}
+.cred-label {
+  font-family: var(--mono);
+  font-size: .58rem;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--gray);
+  margin-bottom: 28px;
+}
+.cred-industries {
+  font-family: var(--serif);
+  font-size: clamp(1.4rem, 2.5vw, 2.2rem);
+  font-weight: 400;
+  color: var(--black);
+  line-height: 1.4;
+  letter-spacing: -.01em;
+  margin-bottom: 24px;
+}
+.cred-industries em { font-style: italic; color: var(--red); }
+.cred-types {
+  font-family: var(--mono);
+  font-size: .65rem;
+  letter-spacing: .1em;
+  color: var(--gray);
+  margin-bottom: 32px;
+  line-height: 2;
+}
+.cred-range {
+  font-size: .9rem;
+  color: #666;
+  font-weight: 300;
+  line-height: 1.7;
+  max-width: 560px;
+  padding-top: 32px;
+  border-top: 1px solid var(--border);
+}
+
+/* ── HOW YOU WORK ── */
+.how {
+  border-bottom: 1px solid var(--border);
+}
+.how-header {
+  padding: 48px 52px 40px;
+  border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: baseline;
+}
+.how-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+}
+.how-item {
+  padding: 52px;
+  border-right: 1px solid var(--border);
+  transition: background .2s;
+}
+.how-item:last-child { border-right: none; }
+.how-item:hover { background: #F5F2EC; }
+.how-num {
+  font-family: var(--mono);
+  font-size: .55rem;
+  letter-spacing: .14em;
+  color: #C8C4BC;
+  margin-bottom: 20px;
+}
+.how-title {
+  font-family: var(--serif);
+  font-size: 1.2rem;
+  font-weight: 400;
+  color: var(--black);
+  margin-bottom: 16px;
+  line-height: 1.3;
+  letter-spacing: -.01em;
+}
+.how-body {
+  font-size: .86rem;
+  line-height: 1.85;
+  color: #777;
+  font-weight: 300;
+}
+
+/* ── CASES ── */
+.cases { border-bottom: 1px solid var(--border); }
+.cases-header {
+  padding: 48px 52px 40px;
+  border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: baseline;
+}
+.case-row {
+  display: grid;
+  grid-template-columns: 64px 1fr auto;
+  border-bottom: 1px solid var(--border);
+  cursor: none;
+  transition: background .2s;
+  align-items: stretch;
+}
+.case-row:hover { background: #F5F2EC; }
+.case-row:hover .cn { color: var(--red); }
+.case-row:hover .ca { color: var(--black); transform: translate(3px,-3px); }
+.cn {
+  padding: 48px 0 48px 52px;
+  font-family: var(--mono);
+  font-size: .6rem;
+  letter-spacing: .12em;
+  color: #C8C4BC;
+  border-right: 1px solid var(--border);
+  display: flex; align-items: flex-start;
+  transition: color .2s;
+}
+.cb { padding: 48px 52px; flex: 1; }
+.c-domain {
+  font-family: var(--mono);
+  font-size: .55rem;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--red);
+  margin-bottom: 10px;
+}
+.c-title {
+  font-family: var(--serif);
+  font-size: 1.75rem;
+  font-weight: 400;
+  letter-spacing: -.01em;
+  margin-bottom: 10px;
+  color: var(--black);
+}
+.c-problem {
+  font-size: .87rem;
+  line-height: 1.75;
+  color: #777;
+  max-width: 520px;
+  margin-bottom: 18px;
+}
+.c-foot { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.ctag {
+  font-family: var(--mono);
+  font-size: .53rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  color: #999;
+}
+.c-role {
+  font-family: var(--mono);
+  font-size: .53rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  background: var(--black);
+  color: var(--white);
+}
+.ca-wrap {
+  padding: 48px 52px 48px 0;
+  display: flex; align-items: flex-start;
+  padding-left: 24px;
+}
+.ca { font-size: 1.1rem; color: #C8C4BC; transition: all .25s; }
+
+/* ── CTA FINAL ── */
+.final-cta {
+  padding: 120px 52px;
+  text-align: center;
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+}
+.final-cta-label {
+  font-family: var(--mono);
+  font-size: .58rem;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--gray);
+  margin-bottom: 32px;
+}
+.final-cta-line {
+  font-family: var(--serif);
+  font-size: clamp(1.6rem, 3vw, 2.8rem);
+  font-weight: 400;
+  color: var(--black);
+  letter-spacing: -.01em;
+  line-height: 1.2;
+  margin-bottom: 40px;
+}
+.final-cta-line em { font-style: italic; color: var(--red); }
+.final-cta-links {
+  display: flex; gap: 32px; justify-content: center; align-items: center;
+}
+.cta-link {
+  font-family: var(--mono);
+  font-size: .6rem;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--black);
+  text-decoration: none;
+  cursor: none;
+  border-bottom: 1px solid transparent;
+  padding-bottom: 2px;
+  transition: border-color .2s, color .2s;
+}
+.cta-link:hover { border-color: var(--red); color: var(--red); }
+.cta-sep {
+  font-family: var(--mono);
+  font-size: .55rem;
+  color: #C8C4BC;
+}
+
+/* ── FOOTER ── */
+footer {
+  padding: 36px 52px;
+  display: flex; justify-content: space-between; align-items: center;
+  background: var(--white);
+  color: var(--black);
+  border-top: 1px solid var(--border);
+}
+.ft-name { font-family: var(--serif); font-size: 1rem; font-weight: 400; }
+.ft-name em { font-style: italic; color: var(--red); }
+.ft-copy { font-family: var(--mono); font-size: .55rem; color: #C8C4BC; letter-spacing: .06em; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 768px) {
+  nav { padding: 20px 24px; }
+  .cred, .how-header, .cases-header, .final-cta { padding-left: 24px; padding-right: 24px; }
+  .how-grid { grid-template-columns: 1fr; }
+  .how-item { border-right: none; border-bottom: 1px solid var(--border); }
+  .case-row { grid-template-columns: 40px 1fr auto; }
+  .cn { padding-left: 24px; }
+  .cb { padding: 32px 24px; }
+  .ca-wrap { padding-right: 24px; padding-left: 16px; }
+  footer { padding: 28px 24px; flex-direction: column; gap: 12px; text-align: center; }
+  .final-cta { padding: 80px 24px; }
+}
+</style>
+</head>
+<body>
+
+<div id="cur"></div>
+
+<nav>
+  <a class="nl" href="#">dokiart</a>
+  <div class="nav-links">
+    <a class="nl on" href="#">Home</a>
+    <a class="nl" href="#">Work</a>
+    <a class="nl" href="#">About</a>
+    <a class="nl" href="#">Play</a>
+  </div>
+</nav>
+
+<!-- ══════ HERO ══════ -->
+<div class="hero">
+  <canvas id="hc"></canvas>
+
+  <div class="hero-text">
+    <div class="hero-eyebrow">Nina Prisniak · Senior Product Designer</div>
+
+    <h1 class="hero-headline">
+      When good design<br>isn't enough to<br><em>move the product forward</em>
+    </h1>
+
+    <!-- Toggle -->
+    <div class="toggle-wrap" id="toggle">
+      <div class="toggle-slider"></div>
+      <button class="toggle-btn active" onclick="setMode('founder')">Founder / PM</button>
+      <button class="toggle-btn" onclick="setMode('manager')">Tired of searching</button>
+    </div>
+
+    <div class="hero-sub" id="heroSub">
+      <span class="visible" id="sub-founder">Product designer with a founder's instincts and an in-house operator's depth. I go wide before I go deep, and I don't stop at the brief.</span>
+      <span id="sub-manager">You need someone who owns the problem, not just the pixels. No babysitting required — I've been the only designer on a product for five years.</span>
+    </div>
+
+    <a class="hero-cta" href="#">See the work →</a>
+  </div>
+
+  <div class="scroll-hint">
+    <div class="scroll-line"></div>
+    <span>scroll</span>
+  </div>
+</div>
+
+<!-- ══════ LOWER ══════ -->
+<div class="lower">
+
+  <!-- CREDIBILITY -->
+  <div class="cred">
+    <div class="cred-label">13 years across</div>
+    <div class="cred-industries">
+      B2B SaaS · <em>MarTech</em> · Fintech · Healthcare<br>
+      AdTech · Logistics · HR Tech
+    </div>
+    <div class="cred-types">
+      Design Systems · Pricing UX · Onboarding · Analytics · AI Workflows · Brand Identity
+    </div>
+    <div class="cred-range">
+      From 0-to-1 MVPs to scaling products with hundreds of thousands of users.<br>
+      Co-founded and led a design agency to 15 people. Three Awwwards recognitions.
+    </div>
+  </div>
+
+  <!-- HOW YOU WORK -->
+  <div class="how">
+    <div class="how-header">
+      <span class="section-tag">How I work</span>
+    </div>
+    <div class="how-grid">
+      <div class="how-item">
+        <div class="how-num">01</div>
+        <div class="how-title">I start with the problem behind the problem.</div>
+        <div class="how-body">Most briefs describe symptoms. I go wider first — competitive landscape, user behavior, business logic — before committing to a direction.</div>
+      </div>
+      <div class="how-item">
+        <div class="how-num">02</div>
+        <div class="how-title">I work like I'm on the team. Because I am.</div>
+        <div class="how-body">Not a consultant dropping deliverables. Embedded across PM, dev, QA, and stakeholders. I care about what ships, not just what's in the file.</div>
+      </div>
+      <div class="how-item">
+        <div class="how-num">03</div>
+        <div class="how-title">I don't stop when the brief ends.</div>
+        <div class="how-body">The pricing flow nobody owned. The AI workflow nobody had introduced yet. The design system that needed a champion. That's the work I'm most proud of.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CASES -->
+  <div class="cases">
+    <div class="cases-header">
+      <span class="section-tag">Selected Work</span>
+      <a class="nl" href="#" style="color:var(--gray);font-size:.58rem;">See all →</a>
+    </div>
+
+    <div class="case-row">
+      <div class="cn">01</div>
+      <div class="cb">
+        <div class="c-domain">B2B SaaS · MarTech</div>
+        <div class="c-title">Salesflow</div>
+        <div class="c-problem">The product had grown faster than its design foundation. Built the first token-based design system from scratch, introduced AI-assisted workflows, and owned pricing UX on a revenue-critical surface.</div>
+        <div class="c-foot">
+          <span class="ctag">Design Systems</span>
+          <span class="ctag">Pricing UX</span>
+          <span class="ctag">AI Workflows</span>
+          <span class="c-role">Sole designer · 5 years</span>
+        </div>
+      </div>
+      <div class="ca-wrap"><span class="ca">↗</span></div>
+    </div>
+
+    <div class="case-row">
+      <div class="cn">02</div>
+      <div class="cb">
+        <div class="c-domain">B2B SaaS · Fintech · NDA</div>
+        <div class="c-title">Investment Monitoring Platform</div>
+        <div class="c-problem">Complex investment monitoring platform with legacy UX that obscured critical data. Full audit, flow redesign, and stakeholder alignment across a data-heavy, multi-role product.</div>
+        <div class="c-foot">
+          <span class="ctag">UX Audit</span>
+          <span class="ctag">Dashboards</span>
+          <span class="ctag">Data-heavy UX</span>
+          <span class="c-role">End-to-end ownership</span>
+        </div>
+      </div>
+      <div class="ca-wrap"><span class="ca">↗</span></div>
+    </div>
+
+    <div class="case-row">
+      <div class="cn">03</div>
+      <div class="cb">
+        <div class="c-domain">Marketplace · Entertainment</div>
+        <div class="c-title">Clubberspot</div>
+        <div class="c-problem">Zero to one. No brand, no product, no system. Three distinct user types — DJs, venues, event-goers — one coherent experience. Art direction, identity, and full interactive prototype.</div>
+        <div class="c-foot">
+          <span class="ctag">0-to-1</span>
+          <span class="ctag">Brand Identity</span>
+          <span class="ctag">Multi-role UX</span>
+          <span class="c-role">Art Director</span>
+        </div>
+      </div>
+      <div class="ca-wrap"><span class="ca">↗</span></div>
+    </div>
+  </div>
+
+  <!-- FINAL CTA -->
+  <div class="final-cta">
+    <div class="final-cta-label">Get in touch</div>
+    <div class="final-cta-line">
+      If you've read this far, you probably have<br>
+      <em>a problem worth solving.</em>
+    </div>
+    <div class="final-cta-links">
+      <a class="cta-link" href="mailto:nina&#64;dokiart.com">nina&#64;dokiart.com</a>
+      <span class="cta-sep">·</span>
+      <a class="cta-link" href="https://linkedin.com/in/nina-prisniak" target="_blank">LinkedIn</a>
+    </div>
+  </div>
+
+  <footer>
+    <div class="ft-name">doki<em>.</em>art</div>
+    <div class="ft-copy">© 2026 Nina Prisniak</div>
+  </footer>
+
+</div>
+
+<script>
+// ── CURSOR ──
+const cur = document.getElementById('cur');
+document.addEventListener('mousemove', e => {
+  cur.style.left = e.clientX + 'px';
+  cur.style.top  = e.clientY + 'px';
+});
+document.addEventListener('mouseover', e => {
+  const el = e.target;
+  if (el.tagName==='A'||el.tagName==='BUTTON'||el.classList.contains('case-row')||el.classList.contains('how-item'))
+    cur.classList.add('hover');
+  else cur.classList.remove('hover');
+});
+
+// ── TOGGLE ──
+function setMode(mode) {
+  const toggle = document.getElementById('toggle');
+  const btns = toggle.querySelectorAll('.toggle-btn');
+  const sub = document.getElementById('heroSub');
+
+  if (mode === 'founder') {
+    btns[0].classList.add('active');
+    btns[1].classList.remove('active');
+    toggle.classList.remove('right');
+    document.getElementById('sub-founder').classList.add('visible');
+    document.getElementById('sub-manager').classList.remove('visible');
+  } else {
+    btns[1].classList.add('active');
+    btns[0].classList.remove('active');
+    toggle.classList.add('right');
+    document.getElementById('sub-manager').classList.add('visible');
+    document.getElementById('sub-founder').classList.remove('visible');
+  }
+}
+
+// ── HERO CANVAS — HEARTBEAT ──
+const hc = document.getElementById('hc');
+const hx = hc.getContext('2d');
+
+function resizeHero() {
+  hc.width  = hc.parentElement.offsetWidth;
+  hc.height = hc.parentElement.offsetHeight;
+}
+window.addEventListener('resize', resizeHero);
+resizeHero();
+
+const RINGS = 5;
+const RING_SPACING = 72;
+
+let heartState = {
+  phase: 0, timer: 0, bpm: 62,
+  ripples: [], t: 0
+};
+
+const PHASES = { 0:40, 1:8, 2:14, 3:8, 4:72 };
+
+function spawnRipple(strong) {
+  heartState.ripples.push({
+    r: 0, alpha: strong ? 0.9 : 0.55,
+    speed: strong ? 4.5 : 3.2, strong
+  });
+}
+
+function drawHero() {
+  const W = hc.width, H = hc.height;
+  if (!W||!H) { requestAnimationFrame(drawHero); return; }
+  const cx = W/2, cy = H/2;
+  const maxR = Math.hypot(cx, cy) * 1.1;
+
+  hx.clearRect(0,0,W,H);
+  hx.fillStyle = '#0C0C0C';
+  hx.fillRect(0,0,W,H);
+
+  heartState.t++;
+  heartState.timer++;
+
+  const dur = PHASES[heartState.phase];
+  if (heartState.timer >= dur) {
+    heartState.timer = 0;
+    if      (heartState.phase === 0) { heartState.phase = 1; spawnRipple(true); }
+    else if (heartState.phase === 1) { heartState.phase = 2; }
+    else if (heartState.phase === 2) { heartState.phase = 3; spawnRipple(false); }
+    else if (heartState.phase === 3) { heartState.phase = 4; }
+    else if (heartState.phase === 4) { heartState.phase = 0; }
+  }
+
+  const breathe = 1 + 0.008 * Math.sin(heartState.t * 0.018);
+  for (let i = RINGS; i >= 1; i--) {
+    const r = i * RING_SPACING * breathe;
+    const alpha = 0.06 + (RINGS - i) * 0.032;
+    hx.beginPath();
+    hx.arc(cx, cy, r, 0, Math.PI*2);
+    hx.strokeStyle = `rgba(248,246,243,${alpha})`;
+    hx.lineWidth = 1;
+    hx.stroke();
+  }
+
+  heartState.ripples = heartState.ripples.filter(rp => rp.r < maxR);
+  heartState.ripples.forEach(rp => {
+    rp.r += rp.speed;
+    const fade = 1 - rp.r / maxR;
+    const a = rp.alpha * fade * fade;
+    hx.beginPath();
+    hx.arc(cx, cy, rp.r, 0, Math.PI*2);
+    hx.strokeStyle = rp.strong
+      ? `rgba(248,246,243,${a * 0.7})`
+      : `rgba(217,79,56,${a * 0.5})`;
+    hx.lineWidth = rp.strong ? 1.5 : 1;
+    hx.stroke();
+  });
+
+  const isBeat = heartState.phase === 1 || heartState.phase === 3;
+  const beatScale = isBeat ? 1 + (1 - heartState.timer / PHASES[heartState.phase]) * 0.5 : 1;
+  const dotR = 7 * beatScale;
+
+  const glow = hx.createRadialGradient(cx,cy,0, cx,cy,dotR*4);
+  glow.addColorStop(0, `rgba(217,79,56,${0.15 * beatScale})`);
+  glow.addColorStop(1, 'rgba(217,79,56,0)');
+  hx.beginPath(); hx.arc(cx,cy,dotR*4,0,Math.PI*2);
+  hx.fillStyle = glow; hx.fill();
+
+  hx.beginPath();
+  hx.arc(cx, cy, dotR, 0, Math.PI*2);
+  hx.fillStyle = '#D94F38';
+  hx.fill();
+
+  requestAnimationFrame(drawHero);
+}
+drawHero();
+</script>
+</body>
+</html>
