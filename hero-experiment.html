@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nina Prisniak — dokiart</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;1,400&family=Geist:wght@200;300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* Cool palette */
+  --ink:       #0F1117;
+  --ink-mid:   #060810;   /* near-black with blue undertone */
+  --paper:     #F2F3F7;
+  --paper-dim: #E8EAF0;
+  --red:       #C8402E;
+  --gray:      #3D4455;   /* darker — passes contrast on light bg */
+  --gray-dim:  #5C6478;   /* was too light */
+  --border:    #D1D5E0;
+
+  --geist:   'Geist', system-ui, sans-serif;
+  --serif:   'Playfair Display', Georgia, serif;
+}
+
+html { font-size: 16px; }
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--geist);
+  font-weight: 300;
+  cursor: none;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── CURSOR ── */
+#cur {
+  position: fixed;
+  width: 6px; height: 6px;
+  background: var(--red);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%,-50%);
+  transition: width .2s, height .2s, background .2s;
+}
+#cur.big {
+  width: 28px; height: 28px;
+  background: transparent;
+  border: 1px solid rgba(200,64,46,.45);
+}
+
+/* ── NAV ── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0;
+  z-index: 100;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 28px 56px;
+}
+.nav-logo {
+  font-family: var(--geist);
+  font-size: .8rem;
+  font-weight: 400;
+  letter-spacing: .04em;
+  color: var(--ink);
+  text-decoration: none;
+  cursor: none;
+}
+.nav-logo em {
+  font-family: var(--serif);
+  font-style: italic;
+  color: var(--red);
+}
+.nav-links { display: flex; gap: 40px; }
+.nav-link {
+  font-family: var(--geist);
+  font-size: .7rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--gray);
+  text-decoration: none;
+  cursor: none;
+  transition: color .2s;
+}
+.nav-link:hover { color: var(--ink); }
+.nav-link.on { color: var(--red); }
+
+/* ── HERO ── */
+.hero {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding-top: 100px;
+}
+
+.hero-left {
+  padding: 80px 56px 80px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
+  z-index: 2;
+}
+
+.hero-eyebrow {
+  font-family: var(--geist);
+  font-size: .68rem;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--gray-dim);
+  margin-bottom: 36px;
+}
+
+.hero-name {
+  font-family: var(--geist);
+  font-size: clamp(3.8rem, 6vw, 6.2rem);
+  font-weight: 200;
+  line-height: .95;
+  letter-spacing: -.04em;
+  color: var(--ink);
+  margin-bottom: 8px;
+}
+
+.hero-brand {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: clamp(3.8rem, 6vw, 6.2rem);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -.01em;
+  color: var(--red);
+  display: block;
+  margin-bottom: 40px;
+}
+
+.hero-role {
+  font-family: var(--geist);
+  font-size: .95rem;
+  font-weight: 300;
+  color: var(--gray);
+  letter-spacing: .01em;
+  margin-bottom: 12px;
+}
+
+.hero-tagline {
+  font-family: var(--geist);
+  font-size: .82rem;
+  font-weight: 300;
+  color: var(--gray-dim);
+  line-height: 1.6;
+  max-width: 320px;
+}
+
+/* Music toggle */
+.music-toggle {
+  margin-top: 48px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--geist);
+  font-size: .6rem;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--gray-dim);
+  border: 1px solid var(--border);
+  padding: 7px 14px;
+  background: transparent;
+  cursor: none;
+  transition: all .2s;
+  align-self: flex-start;
+}
+.music-toggle:hover { border-color: var(--red); color: var(--red); }
+.music-pulse {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--border);
+  transition: background .2s;
+}
+.music-toggle:hover .music-pulse { background: var(--red); }
+
+/* ── HERO RIGHT — canvas panel ── */
+.hero-right {
+  position: relative;
+  background: var(--ink-mid);
+  overflow: hidden;
+}
+
+canvas#hc {
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+}
+
+.hero-right-tag {
+  position: absolute;
+  bottom: 40px; left: 40px;
+  font-family: var(--geist);
+  font-size: .58rem;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: rgba(242,243,247,.2);
+  z-index: 2;
+}
+
+/* ── STATS ── */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid var(--border);
+  background: var(--paper);
+}
+.stat {
+  padding: 48px 56px;
+  border-right: 1px solid var(--border);
+}
+.stat:last-child { border-right: none; }
+
+.stat-n {
+  font-family: var(--serif);
+  font-size: 3.6rem;
+  font-weight: 400;
+  line-height: 1;
+  color: var(--ink);
+  letter-spacing: -.02em;
+}
+.stat-n sup {
+  font-family: var(--geist);
+  font-size: 1rem;
+  font-weight: 300;
+  color: var(--red);
+  vertical-align: super;
+  letter-spacing: 0;
+}
+
+.stat-l {
+  margin-top: 10px;
+  font-family: var(--geist);
+  font-size: .78rem;
+  font-weight: 300;
+  color: var(--gray);
+  line-height: 1.55;
+  max-width: 200px;
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 768px) {
+  nav { padding: 20px 24px; }
+  .hero { grid-template-columns: 1fr; }
+  .hero-right { min-height: 280px; }
+  .hero-left { padding: 40px 24px; }
+  .stats { grid-template-columns: 1fr; }
+  .stat { border-right: none; border-bottom: 1px solid var(--border); }
+  .stat:last-child { border-bottom: none; }
+}
+</style>
+</head>
+<body>
+
+<div id="cur"></div>
+
+<nav>
+  <a class="nav-logo" href="#">doki<em>art</em></a>
+  <div class="nav-links">
+    <a class="nav-link on" href="#">Home</a>
+    <a class="nav-link" href="#">Work</a>
+    <a class="nav-link" href="#">About</a>
+    <a class="nav-link" href="#">Play</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-left">
+    <div class="hero-eyebrow">Product Designer · Ukraine</div>
+    <div>
+      <div class="hero-name">Nina Prisniak</div>
+      <span class="hero-brand">dokiart</span>
+    </div>
+    <div class="hero-role">Product Designer</div>
+    <div class="hero-tagline">13 years designing the unsexy, complex stuff.</div>
+    <button class="music-toggle">
+      <span class="music-pulse"></span>
+      <span>♪ sound off</span>
+    </button>
+  </div>
+
+  <div class="hero-right">
+    <canvas id="hc"></canvas>
+    <div class="hero-right-tag">// still alive</div>
+  </div>
+</section>
+
+<div class="stats">
+  <div class="stat">
+    <div class="stat-n">13<sup>+</sup></div>
+    <div class="stat-l">Years designing the unsexy, complex stuff</div>
+  </div>
+  <div class="stat">
+    <div class="stat-n">15</div>
+    <div class="stat-l">People at the agency I co-founded</div>
+  </div>
+  <div class="stat">
+    <div class="stat-n">6</div>
+    <div class="stat-l">Years as the only designer on a live product</div>
+  </div>
+</div>
+
+<script>
+const cur = document.getElementById('cur');
+document.addEventListener('mousemove', e => {
+  cur.style.left = e.clientX + 'px';
+  cur.style.top  = e.clientY + 'px';
+});
+document.addEventListener('mouseover', e => {
+  if (e.target.tagName === 'A' || e.target.tagName === 'BUTTON')
+    cur.classList.add('big');
+  else cur.classList.remove('big');
+});
+
+/* ── HEARTBEAT CANVAS ── */
+const hc = document.getElementById('hc');
+const hx = hc.getContext('2d');
+
+function resize() {
+  hc.width  = hc.parentElement.offsetWidth;
+  hc.height = hc.parentElement.offsetHeight;
+}
+window.addEventListener('resize', resize);
+resize();
+
+let state = { phase: 0, timer: 0, ripples: [], t: 0 };
+const PHASES = { 0:40, 1:8, 2:14, 3:8, 4:72 };
+
+function spawnRipple(strong) {
+  state.ripples.push({ r: 0, alpha: strong ? .85 : .5, speed: strong ? 4.2 : 3, strong });
+}
+
+function draw() {
+  const W = hc.width, H = hc.height;
+  if (!W || !H) { requestAnimationFrame(draw); return; }
+  const cx = W/2, cy = H/2;
+  const maxR = Math.hypot(cx, cy) * 1.1;
+
+  hx.clearRect(0, 0, W, H);
+  hx.fillStyle = '#060810';
+  hx.fillRect(0, 0, W, H);
+
+  state.t++;
+  state.timer++;
+
+  if (state.timer >= PHASES[state.phase]) {
+    state.timer = 0;
+    if      (state.phase === 0) { state.phase = 1; spawnRipple(true); }
+    else if (state.phase === 1) { state.phase = 2; }
+    else if (state.phase === 2) { state.phase = 3; spawnRipple(false); }
+    else if (state.phase === 3) { state.phase = 4; }
+    else                        { state.phase = 0; }
+  }
+
+  /* static concentric rings — cool tint */
+  const breathe = 1 + .007 * Math.sin(state.t * .018);
+  for (let i = 6; i >= 1; i--) {
+    const r = i * 64 * breathe;
+    const a = .04 + (6 - i) * .022;
+    hx.beginPath();
+    hx.arc(cx, cy, r, 0, Math.PI*2);
+    hx.strokeStyle = `rgba(180,190,220,${a})`;
+    hx.lineWidth = 1;
+    hx.stroke();
+  }
+
+  /* ripple rings */
+  state.ripples = state.ripples.filter(rp => rp.r < maxR);
+  state.ripples.forEach(rp => {
+    rp.r += rp.speed;
+    const fade = 1 - rp.r / maxR;
+    const a = rp.alpha * fade * fade;
+    hx.beginPath();
+    hx.arc(cx, cy, rp.r, 0, Math.PI*2);
+    hx.strokeStyle = rp.strong
+      ? `rgba(180,190,220,${a * .55})`   /* cool white ripple */
+      : `rgba(200,64,46,${a * .65})`;    /* warm red ripple */
+    hx.lineWidth = rp.strong ? 1.5 : 1;
+    hx.stroke();
+  });
+
+  /* center dot */
+  const beat  = state.phase === 1 || state.phase === 3;
+  const scale = beat ? 1 + (1 - state.timer / PHASES[state.phase]) * .45 : 1;
+  const dr    = 6 * scale;
+
+  const glow = hx.createRadialGradient(cx, cy, 0, cx, cy, dr * 5);
+  glow.addColorStop(0, `rgba(200,64,46,${.22 * scale})`);
+  glow.addColorStop(1, 'rgba(200,64,46,0)');
+  hx.beginPath(); hx.arc(cx, cy, dr*5, 0, Math.PI*2);
+  hx.fillStyle = glow; hx.fill();
+
+  hx.beginPath(); hx.arc(cx, cy, dr, 0, Math.PI*2);
+  hx.fillStyle = '#C8402E'; hx.fill();
+
+  requestAnimationFrame(draw);
+}
+draw();
+
+/* ── MUSIC TOGGLE (stub — ready for audio) ── */
+let soundOn = false;
+document.querySelector('.music-toggle').addEventListener('click', () => {
+  soundOn = !soundOn;
+  const label = document.querySelector('.music-toggle span:last-child');
+  const dot   = document.querySelector('.music-pulse');
+  label.textContent = soundOn ? '♪ sound on' : '♪ sound off';
+  dot.style.background = soundOn ? '#C8402E' : '';
+  /* TODO: wire up AudioContext heartbeat here */
+});
+</script>
+</body>
+</html>
