@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Eliminating a support queue with one design decision — dokiart</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&family=Archivo:wght@400&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --black:  #0a0b0d;
+    --red:    #d7352d;
+    --gray:   #383b3e;
+    --line:   rgba(10,11,13,0.14);
+    --sans:   'Inter Tight', -apple-system, BlinkMacSystemFont, sans-serif;
+    --mono:   'Archivo', sans-serif;
+  }
+
+  html, body { background: #ffffff; }
+  body {
+    font-family: var(--sans);
+    color: var(--black);
+    display: flex;
+    justify-content: center;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: var(--red); color: #fff; }
+
+  /* ── shared chrome: pulse field + cursor sit behind / above the artboard ── */
+  #pulse-canvas {
+    position: fixed; inset: 0; width: 100%; height: 100%;
+    display: block; z-index: 0; pointer-events: none;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    * { cursor: none !important; }
+    #cursor {
+      position: fixed; top: 0; left: 0; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px;
+      border-radius: 50%; background: var(--red); border: 1.5px solid var(--red);
+      pointer-events: none; z-index: 300; opacity: 0;
+      transition: width .22s ease, height .22s ease, margin .22s ease, background .22s ease, opacity .2s ease;
+    }
+    #cursor.is-hover { width: 38px; height: 38px; margin: -19px 0 0 -19px; background: transparent; }
+  }
+
+  /* Scale wrapper keeps the 1440 artboard centered and shrinks it on narrow viewports.
+     It carries z-index:1 so the artboard reads over the fixed pulse field. */
+  #scaler { width: 1440px; transform-origin: top center; position: relative; z-index: 1; }
+
+  .frame {
+    position: relative;
+    width: 1440px;
+    height: 4763px;
+    background: transparent;   /* let the dotted pulse field show through the white page */
+    overflow: hidden;
+  }
+
+  /* ── Layout guides ── */
+  .vline { position: absolute; top: 0; height: 4582px; width: 0; border-left: 1px solid var(--line); }
+  .redbar { position: absolute; left: 0; top: 0; width: 6px; height: 4763px; background: var(--red); }
+
+  /* ── Typography helpers ── */
+  .mono {
+    font-family: var(--mono);
+    font-weight: 400;
+    text-transform: uppercase;
+    color: var(--gray);
+    font-size: 11px;
+    letter-spacing: 1.54px;
+    line-height: 16.5px;
+  }
+  .h2 {
+    position: absolute;
+    font-weight: 700;
+    font-size: 48px;
+    line-height: 45.6px;
+    letter-spacing: -1.44px;
+    color: var(--black);
+  }
+  .h2 .accent { color: var(--red); }
+  .body {
+    position: absolute;
+    font-weight: 400;
+    font-size: 17px;
+    line-height: 26.35px;
+    letter-spacing: -0.075px;
+    color: var(--black);
+  }
+  .body p + p { margin-top: 26.35px; }
+  .body em { font-style: italic; }
+
+  /* ── Header ── */
+  .header {
+    position: absolute; top: 0; left: 0; width: 1440px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 28px 71px;
+    z-index: 5;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+  .logo .mark { width: 12px; height: 12px; background: var(--red); }
+  .logo .name { font-size: 18px; line-height: 27px; letter-spacing: -0.36px; color: var(--black); }
+  .nav { display: flex; gap: 48px; align-items: flex-start; }
+  .nav a { text-decoration: none; position: relative; transition: color .2s; }
+  .nav a:hover { color: var(--red); }
+  .nav a.active { color: var(--red); padding-left: 14px; }
+  .nav a.active .dot {
+    position: absolute; left: 0; top: 5px; width: 6px; height: 6px;
+    background: var(--red); border-radius: 3px;
+  }
+
+  /* ── Sub navigation (tabs) ── */
+  .subnav {
+    position: absolute; top: 122px; left: 0; width: 1440px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 40px 71px;
+    z-index: 5;
+  }
+  .subnav .tabs { display: flex; gap: 60px; align-items: center; }
+  .subnav .tab {
+    width: 136px; display: flex; flex-direction: column; align-items: center; gap: 8px;
+    font-family: var(--mono); font-size: 12px; letter-spacing: 1.44px; line-height: 18px;
+    text-transform: uppercase; color: var(--gray);
+    background: none; border: 0; padding: 0;
+    transition: color .25s;
+  }
+  .subnav .tab:hover { color: var(--red); }
+  .subnav .tab.active { color: var(--red); }
+  .subnav .tab .underline { width: 0; height: 1px; background: var(--red); transition: width .3s ease; }
+  .subnav .tab.active .underline { width: 100%; }
+  .subnav .next {
+    width: 183.8px; text-align: right;
+    font-family: var(--mono); font-size: 12px; letter-spacing: 1.44px; line-height: 18px;
+    text-transform: uppercase; color: var(--gray); text-decoration: none;
+    transition: color .2s;
+  }
+  .subnav .next:hover { color: var(--red); }
+
+  /* ── Hero ── */
+  .hero {
+    position: absolute; left: 66px; top: 230px; width: 970px;
+    font-weight: 700; font-size: 85.2px; line-height: 80.94px; letter-spacing: -3.408px;
+    color: var(--black);
+  }
+  .hero .accent { color: var(--red); }
+
+  /* ── Meta block ── */
+  .meta { position: absolute; left: 270px; top: 557px; width: 384px; display: flex; flex-direction: column; gap: 20px; }
+  .meta .row { display: flex; gap: 8px; font-size: 17px; line-height: 26.35px; letter-spacing: -0.075px; }
+  .meta .row .k { font-weight: 700; width: 98px; flex: none; }
+  .meta .row .v { font-weight: 400; }
+
+  /* ── Settings card ── */
+  .card { position: absolute; left: 707px; top: 500px; width: 746px; height: 585px; }
+  .card img { display: block; width: 100%; height: 100%; object-fit: contain; }
+
+  /* ── Colours band ── */
+  .colors { position: absolute; left: 50%; transform: translateX(-50%); top: 2188px; width: 1298px; height: 314px; }
+  .colors img { display: block; width: 100%; height: 100%; }
+
+  /* ── Showcase row ── */
+  .shot { position: absolute; display: block; transition: transform .3s ease; }
+  .shot img { display: block; width: 100%; height: 100%; object-fit: contain; }
+  a.shot:hover { transform: translateY(-4px); }
+  .shadow { filter: drop-shadow(0 2px 6px rgba(20,31,50,0.1)); }
+  .rounded { border-radius: 8px; overflow: hidden; }
+
+  /* ── Dark outcome section ── */
+  .darkbg { position: absolute; left: 0; top: 3372px; width: 1440px; height: 733px; background: #08090c; }
+  .dark-pulse { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
+  .outcome { position: absolute; left: 270px; top: 3500px; width: 600px; display: flex; flex-direction: column; gap: 48px; color: #fff; }
+  .outcome .lead { font-size: 17px; line-height: 26.35px; letter-spacing: -0.075px; font-weight: 400; }
+  .outcome .block { display: flex; flex-direction: column; gap: 16px; }
+  .outcome .block h3 { font-weight: 500; font-size: 30px; line-height: 45.6px; letter-spacing: -1.44px; }
+  .outcome .block p { font-weight: 400; font-size: 17px; line-height: 26.35px; letter-spacing: -0.075px; }
+
+  /* ── Audit caption ── */
+  .audit { position: absolute; left: 270px; top: 2533px; width: 600px; font-size: 14px; line-height: 24.4px; letter-spacing: -0.075px; }
+  .audit b { font-weight: 600; }
+
+  /* ── Bottom nav ── */
+  .botnav {
+    position: absolute; left: 0; top: 4582px; width: 1440px; height: 99px;
+    border-top: 1px solid var(--line);
+  }
+  .botnav .l { position: absolute; left: 71px; top: 50%; transform: translateY(-50%); transition: color .2s; }
+  .botnav .r { position: absolute; right: 70.66px; top: 50%; transform: translateY(-50%); text-align: right; transition: color .2s; }
+  .botnav a:hover { color: var(--red); }
+
+  /* ── Footer ── */
+  .footer {
+    position: absolute; left: 0; top: 4681px; width: 1440px;
+    border-top: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 33px 71px 32px;
+  }
+  .footer .place { display: flex; align-items: center; gap: 10px; }
+  .footer .place .dot { width: 6px; height: 6px; background: var(--red); opacity: .77; border-radius: 3px; animation: blink 2s infinite; }
+  .footer .social { display: flex; gap: 24px; padding: 0 16px; }
+  .footer .social a { transition: color .2s; }
+  .footer .social a:hover { color: var(--red); }
+  .footer .mono, .botnav .mono { white-space: nowrap; }
+
+  @keyframes blink { 0%,100% { opacity: .4; transform: scale(.85); } 50% { opacity: 1; transform: scale(1.1); } }
+
+  /* ── load-in reveal (matches Home / About) ── */
+  @keyframes riseIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .header { animation: riseIn 1.2s cubic-bezier(.2,.7,.2,1) both; animation-delay: .15s; }
+  .subnav { animation: riseIn 1.2s cubic-bezier(.2,.7,.2,1) both; animation-delay: .30s; }
+  .hero   { animation: riseIn 1.2s cubic-bezier(.2,.7,.2,1) both; animation-delay: .42s; }
+  .meta   { animation: riseIn 1.2s cubic-bezier(.2,.7,.2,1) both; animation-delay: .70s; }
+  .card   { animation: fadeIn 1.4s ease both;                     animation-delay: .85s; }
+  @media (prefers-reduced-motion: reduce) {
+    .header, .subnav, .hero, .meta, .card { animation: none; }
+  }
+
+  /* ── Short mode: hide the evidence blocks; JS re-flows what's left ── */
+  body.short .evidence,
+  body.short #card-el,
+  body.short #process-h,
+  body.short #process-b,
+  body.short #colors-el,
+  body.short #audit-el { display: none; }
+</style>
+</head>
+<body>
+
+<canvas id="pulse-canvas"></canvas>
+<div id="cursor"></div>
+
+<div id="scaler">
+  <div class="frame" id="frame-el">
+
+    <!-- Layout guides -->
+    <span class="vline" style="left:71px"></span>
+    <span class="vline" style="left:270px"></span>
+    <span class="vline" style="left:661px"></span>
+    <span class="vline" style="left:1051px"></span>
+    <span class="redbar"></span>
+
+    <!-- Header -->
+    <header class="header">
+      <a class="logo" href="index.html"><span class="mark"></span><span class="name">dokiart</span></a>
+      <nav class="nav">
+        <a class="mono" href="index.html">Home</a>
+        <a class="mono active" href="work.html"><span class="dot"></span>Work</a>
+        <a class="mono" href="about.html">About</a>
+      </nav>
+    </header>
+
+    <!-- Sub navigation -->
+    <div class="subnav">
+      <div class="tabs">
+        <button class="tab active" type="button" data-mode="full">Full Case<span class="underline"></span></button>
+        <button class="tab" type="button" data-mode="short">Shorten version<span class="underline"></span></button>
+      </div>
+      <a class="next" href="case-leitwerk.html">Next case · Leitwerk →</a>
+    </div>
+
+    <!-- Hero -->
+    <h1 class="hero">Eliminating a support queue with <span class="accent">one design decision</span></h1>
+
+    <!-- Meta -->
+    <div class="meta">
+      <div class="row"><span class="k">Role</span><span class="v">Sole product designer</span></div>
+      <div class="row"><span class="k">Domain</span><span class="v">Martech, B2B SaaS<br>outreach platform</span></div>
+      <div class="row"><span class="k">Constraint</span><span class="v" style="width:270px">Post-launch · limited resources · no theming engine</span></div>
+      <div class="row"><span class="k">Status</span><span class="v">Shipped in production</span></div>
+    </div>
+
+    <!-- Settings card -->
+    <div class="card" id="card-el"><img src="case-assets/card.svg" alt="White Label colour settings panel with main, secondary and background colour controls and a live preview"></div>
+
+    <!-- Intro -->
+    <p class="body" id="intro" style="left:270px; top:841px; width:384px">The product needed to be resold under partner brands — a requirement that landed after it had shipped, with limited resources and no theming infrastructure. The visible result is a logo, a name, and three colour controls any user can set themselves. The work was deciding what couldn't move.</p>
+
+    <!-- The problem -->
+    <h2 class="h2" style="left:71px; top:1150px; width:797px">The <span class="accent">problem</span></h2>
+    <div class="body" id="problem-b" style="left:270px; top:1244px; width:600px">
+      <p>The product was already in production when the business needed it resellable under partner brands — partly to take load off support, partly because self-serve branding was a gap sales couldn't fill. A revenue and positioning need, not a cosmetic one.</p>
+      <p>The obvious way to deliver it was a full theming layer: a large build, with a real risk that partners would produce broken-looking interfaces and contact support anyway. The expensive solution might not even fix the problem it was meant for.</p>
+    </div>
+
+    <!-- The insight -->
+    <h2 class="h2" style="left:71px; top:1562px">The <span class="accent">insight</span></h2>
+    <div class="body" id="insight-b" style="left:270px; top:1656px; width:600px">
+      <p>Before designing anything, I talked to support: what do partners actually ask for? The answer reframed the scope. Users didn't want to <em>theme a product </em>— they wanted it to feel like theirs.</p>
+      <p>That feeling rested on very little: the logo, the name, the primary actions, a few accents. Everything else was structure they never noticed and never asked to change. The large, complex problem in the original brief was mostly imaginary.</p>
+    </div>
+
+    <!-- The process -->
+    <h2 class="h2" id="process-h" style="left:71px; top:1947px">The <span class="accent">process</span></h2>
+    <p class="body" id="process-b" style="left:270px; top:2024px; width:600px">I reviewed the whole system and redesigned the few elements that carry a partner's brand, so they could take any colour cleanly without affecting legibility or state. For partners without a designer, the system generates a coherent palette automatically.</p>
+
+    <!-- Colours band -->
+    <div class="colors" id="colors-el"><img src="case-assets/colors.svg" alt="Colour audit: every colour in the product sorted into brand colours and structural neutral scales"></div>
+
+    <!-- Audit caption -->
+    <p class="audit" id="audit-el"><b>The audit.</b> Every colour in the product, sorted by one question: does it carry the brand, or do structural work? Only a handful carry brand. The rest — hierarchy, state, feedback — locks to a neutral scale that always stays legible, so a partner can't break the interface with a bad palette.</p>
+
+    <!-- Showcase row -->
+    <div class="shot evidence" style="left:72px; top:2647px; width:1296px; height:589px; transition:none"><img src="case-assets/design.svg" alt="White-label settings: logo upload, colour controls with live preview, browser-tab branding, and the rebranded partner sidebar"></div>
+
+    <!-- Dark outcome section -->
+    <div class="darkbg" id="darkbg-el"></div>
+    <h2 class="h2" id="outcome-h" style="left:71px; top:3406px; color:#fff">The <span class="accent">outcome</span></h2>
+    <div class="outcome" id="outcome-el">
+      <p class="lead">White-label went live as something sales could offer, at a fraction of the cost of a theming engine.</p>
+      <div class="block">
+        <h3>Branding tickets stopped arriving</h3>
+        <p>The questions the work was meant to absorb stopped. Partners can't misconfigure what was never left configurable.</p>
+      </div>
+      <div class="block">
+        <h3>Built to last</h3>
+        <p>The system is transparent and easy to maintain — it's held up for years without becoming a source of edge cases.</p>
+      </div>
+      <div class="block">
+        <h3>A reusable decision</h3>
+        <p>"Find out how little needs to change before building" became a default move on later system work.</p>
+      </div>
+    </div>
+
+    <!-- Reflection -->
+    <h2 class="h2" id="refl-h" style="left:71px; top:4152px; color:var(--red)">Reflection</h2>
+    <div class="body" id="refl-b" style="left:270px; top:4246px; width:600px">
+      <p>The instinct under a constraint like this is to scope the proper solution and ask for time to build it. The more useful move was to check whether the proper solution was even needed — and the answer came from talking to support before opening the design tool.</p>
+      <p>It's one of the least visually loud things I've shipped, and one of the decisions I'd most want to be asked about, because the value is in how little ended up on the screen.</p>
+    </div>
+
+    <!-- Bottom nav -->
+    <div class="botnav" id="botnav-el">
+      <a class="l mono" href="work.html">← All work</a>
+      <a class="r mono" href="case-leitwerk.html">Next case · Leitwerk →</a>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer" id="footer-el">
+      <div class="mono">© 2026 Nina Prisniak / dokiart</div>
+      <div class="place">
+        <span class="dot"></span>
+        <span class="mono">Ukraine,&nbsp; Kyiv —</span>
+        <span class="mono" data-clock>—</span>
+      </div>
+      <div class="social">
+        <a class="mono" href="https://www.linkedin.com/in/nina-prisniak" target="_blank" style="text-decoration:none">LinkedIn</a>
+        <a class="mono" href="https://www.behance.net/dokiart" target="_blank" style="text-decoration:none">Behance</a>
+      </div>
+    </footer>
+
+  </div>
+</div>
+
+<script>
+  const frameEl = document.getElementById('frame-el');
+
+  /* ── Scale the fixed 1440 artboard down to fit narrower viewports ── */
+  function fit() {
+    const scaler = document.getElementById('scaler');
+    const scale = Math.min(1, window.innerWidth / 1440);
+    scaler.style.transform = 'scale(' + scale + ')';
+    document.body.style.height = (frameEl.offsetHeight * scale) + 'px';
+  }
+  window.addEventListener('resize', fit);
+
+  /* ── Tab switching: Full Case ⇄ Shorten version ──
+     Short mode hides the evidence blocks, then re-flows the trailing sections
+     up against the insight so there are no gaps. Positions are measured at
+     runtime, so they stay correct regardless of text reflow. */
+  (function () {
+    const tabs = document.querySelectorAll('.subnav .tab');
+    const trailing = ['darkbg-el','outcome-h','outcome-el','refl-h','refl-b','botnav-el','footer-el'];
+    const fullTop = {};
+    trailing.forEach(id => { fullTop[id] = document.getElementById(id).offsetTop; });
+    const fullFrameH = frameEl.offsetHeight;   // captured in full mode
+    const GAP = 124; // breathing room between insight and the dark outcome band
+
+    function setMode(mode) {
+      const short = mode === 'short';
+      document.body.classList.toggle('short', short);
+
+      tabs.forEach(t => t.classList.toggle('active', t.dataset.mode === mode));
+
+      if (short) {
+        const insight = document.getElementById('insight-b');
+        const newDarkTop = insight.offsetTop + insight.offsetHeight + GAP;
+        const delta = fullTop['darkbg-el'] - newDarkTop;
+        trailing.forEach(id => { document.getElementById(id).style.top = (fullTop[id] - delta) + 'px'; });
+        const f = document.getElementById('footer-el');
+        frameEl.style.height = (f.offsetTop + f.offsetHeight) + 'px';
+      } else {
+        // restore each element's full top explicitly — several of these
+        // are positioned via inline styles, so clearing would zero them out
+        trailing.forEach(id => { document.getElementById(id).style.top = fullTop[id] + 'px'; });
+        frameEl.style.height = fullFrameH + 'px';
+      }
+      fit();
+    }
+
+    tabs.forEach(tab => tab.addEventListener('click', () => setMode(tab.dataset.mode)));
+  })();
+
+  fit();
+
+  /* ── Live Kyiv clock ── */
+  function tick() {
+    const t = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Europe/Kyiv', hour: '2-digit', minute: '2-digit', hour12: false
+    }).format(new Date());
+    document.querySelectorAll('[data-clock]').forEach(el => el.textContent = t);
+  }
+  tick(); setInterval(tick, 15000);
+
+  /* ── Click ripples (shared) ── */
+  window.__dokiClicks = [];
+  window.addEventListener('pointerdown', e => {
+    if (e.target.closest('a, button, input, textarea, select')) return;
+    const now = performance.now();
+    window.__dokiClicks = window.__dokiClicks.filter(c => now - c.t < 2500);
+    window.__dokiClicks.push({ cx: e.clientX, cy: e.clientY, t: now });
+  });
+
+  /* ── Custom cursor (shared) ── */
+  (function () {
+    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+    const cursor = document.getElementById('cursor');
+    let visible = false;
+    window.addEventListener('pointermove', e => {
+      cursor.style.left = e.clientX + 'px';
+      cursor.style.top  = e.clientY + 'px';
+      if (!visible) { cursor.style.opacity = '1'; visible = true; }
+      const interactive = e.target.closest('a, button, .tab');
+      cursor.classList.toggle('is-hover', !!interactive);
+    });
+    document.addEventListener('mouseleave', () => { cursor.style.opacity = '0'; visible = false; });
+    document.addEventListener('mouseenter', () => { cursor.style.opacity = '1'; visible = true; });
+  })();
+
+  /* ── Full-page pulse field (shared with Home / About) ── */
+  (function () {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const INK_RGB = [10, 11, 13];
+    const ACC_RGB = [215, 53, 45];
+    const inkA = a => `rgba(${INK_RGB},${a})`;
+    const accA = a => `rgba(${ACC_RGB},${a})`;
+    const canvas = document.getElementById('pulse-canvas');
+    const ctx = canvas.getContext('2d');
+    let w = 0, h = 0, dpr = 1;
+    function resize() {
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      w = window.innerWidth; h = window.innerHeight;
+      canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    window.addEventListener('resize', resize); resize();
+    const M = { x: w / 2, y: h / 2, sx: w / 2, sy: h / 2 };
+    window.addEventListener('pointermove', e => { M.x = e.clientX; M.y = e.clientY; });
+    function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
+    function frame(now) {
+      requestAnimationFrame(frame);
+      M.sx += (M.x - M.sx) * 0.05; M.sy += (M.y - M.sy) * 0.05;
+      const clicks = window.__dokiClicks;
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, w, h);
+      const gap = 32, r0 = 1.15, W = 0.55, mx = M.sx, my = M.sy;
+      const ox = ((w % gap) / 2) + gap / 2, oy = ((h % gap) / 2) + gap / 2;
+      for (let y = oy; y < h; y += gap) {
+        for (let x = ox; x < w; x += gap) {
+          const dx = x - mx, dy = y - my, d = Math.sqrt(dx * dx + dy * dy);
+          let swell = 0.30;
+          const suppress = Math.exp(-d * d / (180 * 180));
+          swell *= (1 - suppress * 0.92);
+          for (const c of clicks) {
+            const cdx = x - c.cx, cdy = y - c.cy, cd = Math.sqrt(cdx * cdx + cdy * cdy);
+            const age = (now - c.t) / 1000, rr = age * 540;
+            const band = Math.exp(-Math.pow((cd - rr) / 46, 2));
+            swell += band * Math.max(0, 1 - age / 2.0) * 1.5;
+          }
+          const r = r0 * (1 + swell * 3.0) * W;
+          if (r < 0.22) continue;
+          const a = clamp(0.12 + swell * 0.6, 0, 1);
+          ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832);
+          ctx.fillStyle = swell > 0.62 ? accA(a) : inkA(a * 0.5); ctx.fill();
+        }
+      }
+    }
+    requestAnimationFrame(frame);
+  })();
+
+  /* ── Dark-band pulse field (Outcome section) ──
+     The black band is opaque, so it hides the global field behind it.
+     This gives the band its own canvas — light dots + the shared red
+     click ripples — exactly like the dark cases band on Home. The extra
+     bit Home doesn't need: clicks arrive in viewport pixels, so we divide
+     by the artboard's current scale to land them in the band's local space. */
+  (function () {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const band = document.getElementById('darkbg-el');
+    if (!band) return;
+    const canvas = document.createElement('canvas');
+    canvas.className = 'dark-pulse';
+    band.insertBefore(canvas, band.firstChild);
+    const ctx = canvas.getContext('2d');
+
+    const PAPER = '#08090c';
+    const DOT = [243, 241, 239];   // light dots
+    const ACC = [215, 53, 45];     // red ripples
+    const dotA = a => `rgba(${DOT},${a})`;
+    const accA = a => `rgba(${ACC},${a})`;
+    const WEIGHT = 0.42, GAP = 32;
+
+    let w = 0, h = 0, dpr = 1;
+    function resize() {
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      w = band.offsetWidth; h = band.offsetHeight;          // unscaled layout px
+      canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    const M = { sx: -9999, sy: -9999, x: -9999, y: -9999, inside: false };
+    window.addEventListener('pointermove', e => {
+      const r = canvas.getBoundingClientRect();
+      const scx = r.width / w || 1, scy = r.height / h || 1;  // = artboard scale
+      M.x = (e.clientX - r.left) / scx;
+      M.y = (e.clientY - r.top) / scy;
+      M.inside = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+    });
+
+    function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
+
+    function frame(now) {
+      requestAnimationFrame(frame);
+      M.sx += (M.x - M.sx) * 0.05;
+      M.sy += (M.y - M.sy) * 0.05;
+
+      const rect = canvas.getBoundingClientRect();
+      const scx = rect.width / w || 1, scy = rect.height / h || 1;
+      const clicks = window.__dokiClicks;
+
+      ctx.fillStyle = PAPER; ctx.fillRect(0, 0, w, h);
+
+      const gap = GAP, r0 = 1.15, W = WEIGHT;
+      const ox = ((w % gap) / 2) + gap / 2, oy = ((h % gap) / 2) + gap / 2;
+
+      for (let y = oy; y < h; y += gap) {
+        for (let x = ox; x < w; x += gap) {
+          let swell = 0.30;
+
+          if (M.inside) {
+            const dx = x - M.sx, dy = y - M.sy, d = Math.sqrt(dx * dx + dy * dy);
+            const suppress = Math.exp(-d * d / (180 * 180));
+            swell *= (1 - suppress * 0.92);
+          }
+
+          for (const c of clicks) {
+            const lx = (c.cx - rect.left) / scx, ly = (c.cy - rect.top) / scy;
+            const cdx = x - lx, cdy = y - ly, cd = Math.sqrt(cdx * cdx + cdy * cdy);
+            const age = (now - c.t) / 1000, rr = age * 540;
+            const band2 = Math.exp(-Math.pow((cd - rr) / 46, 2));
+            swell += band2 * Math.max(0, 1 - age / 2.0) * 1.5;
+          }
+
+          const r = r0 * (1 + swell * 3.0) * W;
+          if (r < 0.22) continue;
+          const a = clamp(0.12 + swell * 0.6, 0, 1);
+          ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832);
+          ctx.fillStyle = swell > 0.62 ? accA(a) : dotA(a * 0.7); ctx.fill();
+        }
+      }
+    }
+
+    resize();
+    window.addEventListener('resize', () => { ctx.setTransform(1, 0, 0, 1, 0, 0); resize(); });
+    if (window.ResizeObserver) {
+      new ResizeObserver(() => { ctx.setTransform(1, 0, 0, 1, 0, 0); resize(); }).observe(band);
+    }
+    requestAnimationFrame(frame);
+  })();</script>
+</body>
+</html>
