@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Salesflow — Nina Prisniak / dokiart</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,400;0,500;0,700;0,800;0,900;1,400&family=JetBrains+Mono:wght@400;500&family=Archivo:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --white:  #ffffff;
+  --ink:    #0a0b0d;
+  --ink-2:  #383b3e;
+  --ink-3:  #6f7275;
+  --ink-4:  #9fa2a5;
+  --rule:   rgba(10,11,13,0.14);
+  --red:    #d7352d;
+  --wash:   #f4f4f3;
+
+  --sans:    'Inter Tight', -apple-system, system-ui, sans-serif;
+  --archivo: 'Archivo', sans-serif;
+  --mono:    'JetBrains Mono', ui-monospace, monospace;
+
+  --pad: clamp(28px, 5vw, 71px);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background: var(--white);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; text-decoration: none; }
+::selection { background: var(--red); color: var(--white); }
+
+main, header, footer { position: relative; z-index: 2; }
+
+/* ─── fixed left red bar ─── */
+.edge {
+  position: fixed;
+  top: 0; left: 0;
+  width: 6px; height: 100%;
+  background: var(--red);
+  z-index: 200;
+}
+
+/* ─── background column rules ─── */
+.bg-rules {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  display: grid;
+  grid-template-columns:
+    var(--pad)
+    0.4fr clamp(30px,5vw,80px)
+    1fr   clamp(30px,5vw,80px)
+    1fr   clamp(30px,5vw,80px)
+    1fr
+    var(--pad);
+}
+.bg-rules .r { position: relative; border-left: 1px solid var(--rule); grid-row: 1; }
+.bg-rules .r0 { grid-column: 2; }
+.bg-rules .r1 { grid-column: 4; }
+.bg-rules .r2 { grid-column: 6; }
+.bg-rules .r3 { grid-column: 8; }
+
+/* ─── nav ─── */
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 28px var(--pad);
+  background: transparent;
+  border-bottom: 1px solid transparent;
+  transition: padding .3s, background .3s, backdrop-filter .3s, border-color .3s;
+}
+.nav.scrolled {
+  padding-top: 18px;
+  padding-bottom: 18px;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom-color: var(--rule);
+}
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--sans);
+  font-weight: 400;
+  font-size: 18px;
+  letter-spacing: -0.02em;
+}
+.logo .sq { width: 12px; height: 12px; background: var(--red); flex-shrink: 0; }
+.nav-links { display: flex; gap: 16px; margin-right: -16px; }
+.nav-links a {
+  font-family: var(--archivo);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  transition: color .2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 16px;
+  margin: -14px 0;
+}
+.nav-links a:hover { color: var(--red); }
+.nav-links a.active { color: var(--red); }
+.nav-links a.active::before {
+  content: '';
+  width: 6px; height: 6px;
+  background: var(--red);
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+/* ─── full-page pulse canvas ─── */
+#pulse-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* ─── custom cursor ─── */
+@media (hover: hover) and (pointer: fine) {
+  * { cursor: none !important; }
+  #cursor {
+    position: fixed;
+    top: 0; left: 0;
+    width: 7px; height: 7px;
+    margin: -3.5px 0 0 -3.5px;
+    border-radius: 50%;
+    background: var(--red);
+    border: 1.5px solid var(--red);
+    pointer-events: none;
+    z-index: 300;
+    transition: width .22s ease, height .22s ease, margin .22s ease, background .22s ease, opacity .2s ease;
+  }
+  #cursor.is-hover {
+    width: 38px; height: 38px;
+    margin: -19px 0 0 -19px;
+    background: transparent;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════
+   CASE PAGE — shared shell. Only the prose/figures change per case.
+   ════════════════════════════════════════════════════════════ */
+
+/* readable content column: starts at the r1 guide, like work-intro */
+.col {
+  display: grid;
+  grid-template-columns:
+    0.4fr clamp(30px,5vw,80px)
+    1fr   clamp(30px,5vw,80px)
+    1fr   clamp(30px,5vw,80px)
+    1fr;
+}
+.col > .lead { grid-column: 1 / 3; }   /* left rail: section number / label */
+.col > .body { grid-column: 5 / -1; }  /* right: reading column            */
+
+.section-num {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  color: var(--ink-4);
+}
+.section-label {
+  font-family: var(--archivo);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  margin-top: 8px;
+}
+
+.body p { font-size: 17px; line-height: 1.6; max-width: 58ch; color: var(--ink); }
+.body p + p { margin-top: 18px; }
+.body h3 {
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+  margin: 44px 0 12px;
+}
+.body h3:first-child { margin-top: 0; }
+.body strong { font-weight: 700; }
+
+/* ─── 1 · HERO / OVERVIEW ─── */
+.case-hero { padding: 48px var(--pad) 0; }
+.case-eyebrow {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  display: inline-block;
+  margin-bottom: 26px;
+}
+.case-eyebrow .red { color: var(--red); }
+.case-title {
+  font-family: var(--sans);
+  font-weight: 800;
+  font-size: clamp(40px, 7vw, 104px);
+  line-height: 0.92;
+  letter-spacing: -0.04em;
+  max-width: 16ch;
+  margin-left: -0.03em;
+}
+.case-summary {
+  padding: 30px var(--pad) 0;
+}
+.case-summary .body p { font-size: 19px; color: var(--ink-2); max-width: 56ch; }
+
+/* meta strip — snaps to the four-column grid, one fact per cell */
+.meta {
+  padding: 44px var(--pad) 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--rule);
+  border: 1px solid var(--rule);
+  margin: 44px var(--pad) 0;
+  width: auto;
+}
+.meta .cell { background: var(--white); padding: 20px 22px; }
+.meta .k {
+  font-family: var(--archivo);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  margin-bottom: 8px;
+}
+.meta .v {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--ink);
+  line-height: 1.35;
+}
+
+/* ─── section rhythm ─── */
+.block { padding: 84px var(--pad) 0; }
+.block.first { padding-top: 88px; }
+.divider { height: 1px; background: var(--rule); margin: 84px var(--pad) 0; }
+
+/* ─── failure-mode / role list inside The Work ─── */
+.stack { margin-top: 26px; }
+.item {
+  padding: 22px 0;
+  border-top: 1px solid var(--rule);
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: 18px;
+}
+.item:last-child { border-bottom: 1px solid var(--rule); }
+.item .n { font-family: var(--mono); font-size: 12px; color: var(--red); padding-top: 3px; }
+.item h4 { font-family: var(--sans); font-weight: 700; font-size: 18px; letter-spacing: -0.01em; margin-bottom: 6px; }
+.item p { font-size: 16px; line-height: 1.55; color: var(--ink-2); max-width: 60ch; }
+
+/* ─── figure / screen placeholder ─── */
+.figure { padding: 40px var(--pad) 0; }
+.figure .frame {
+  border: 1px solid var(--rule);
+  background: var(--wash);
+  aspect-ratio: 16 / 9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+.figure .frame::after {
+  content: 'SCREEN — drop export here';
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+}
+.figure figcaption {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: 18px;
+}
+.figure .cap-n { font-family: var(--mono); font-size: 12px; color: var(--ink-4); }
+.figure .cap-t { font-family: var(--archivo); font-size: 13px; color: var(--ink-2); max-width: 60ch; line-height: 1.5; }
+
+/* ─── colour audit map (the hero artifact) ─── */
+.audit { padding: 40px var(--pad) 0; }
+.audit .row { margin-top: 30px; }
+.audit .row:first-child { margin-top: 0; }
+.audit .row-label {
+  font-family: var(--archivo);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.audit .row-label .count { font-family: var(--mono); color: var(--ink-4); }
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 6px;
+}
+.sw {
+  aspect-ratio: 1;
+  border-radius: 2px;
+  position: relative;
+}
+/* "before" — colour scattered across the product */
+.sw.b1 { background:#3a6ea5;} .sw.b2 { background:#4f8a8b;} .sw.b3 { background:#c9a227;}
+.sw.b4 { background:#8a5a83;} .sw.b5 { background:#5b8c5a;} .sw.b6 { background:#b5642f;}
+.sw.b7 { background:#566270;} .sw.b8 { background:#7d8597;} .sw.b9 { background:#9aa0a6;}
+.sw.b0 { background:#444a52;}
+/* "after" — locked to neutral */
+.sw.lock { background: var(--wash); border: 1px solid var(--rule); }
+/* "after" — the three that move */
+.sw.var {
+  background: var(--white);
+  border: 1.5px solid var(--red);
+  box-shadow: inset 0 0 0 4px var(--red);
+}
+.sw.var::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(45deg, transparent 0 5px, rgba(215,53,45,0.14) 5px 6px);
+}
+.audit figcaption {
+  margin-top: 26px;
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: 18px;
+}
+.audit .cap-n { font-family: var(--mono); font-size: 12px; color: var(--ink-4); }
+.audit .cap-t { font-family: var(--archivo); font-size: 13px; color: var(--ink-2); max-width: 62ch; line-height: 1.55; }
+
+/* ─── white-label control demo (the deceptively simple output) ─── */
+.control {
+  padding: 40px var(--pad) 0;
+}
+.control .panel {
+  border: 1px solid var(--rule);
+  background: var(--white);
+  max-width: 420px;
+  padding: 26px;
+}
+.control .field { margin-bottom: 18px; }
+.control .field:last-child { margin-bottom: 0; }
+.control .field .l {
+  font-family: var(--archivo);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  margin-bottom: 7px;
+}
+.control .field .input {
+  border: 1px solid var(--rule);
+  height: 38px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--ink-3);
+}
+.control .pickers { display: flex; gap: 10px; }
+.control .pick { flex: 1; }
+.control .pick .chip {
+  height: 38px;
+  border: 1px solid var(--rule);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 11px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-3);
+}
+.control .pick .chip .dot { width: 16px; height: 16px; border-radius: 3px; flex-shrink: 0; }
+.control .pick:nth-child(1) .dot { background: var(--red); }
+.control .pick:nth-child(2) .dot { background: var(--ink); }
+.control .pick:nth-child(3) .dot { background: var(--ink-3); }
+.control figcaption {
+  margin-top: 18px;
+  font-family: var(--archivo);
+  font-size: 13px;
+  color: var(--ink-2);
+  max-width: 52ch;
+  line-height: 1.55;
+}
+
+@media (max-width: 600px) {
+  .swatches { grid-template-columns: repeat(8, 1fr); }
+}
+
+/* ─── impact panel ─── */
+.impact { background: var(--ink); color: var(--white); margin-top: 92px; }
+.impact .inner { padding: 84px var(--pad); }
+.impact .section-num { color: rgba(255,255,255,0.4); }
+.impact .section-label { color: rgba(255,255,255,0.7); }
+.impact .body p { color: rgba(255,255,255,0.82); }
+.impact .body h3 { color: var(--white); }
+.impact .item { border-color: rgba(255,255,255,0.16); }
+.impact .item:last-child { border-bottom-color: rgba(255,255,255,0.16); }
+.impact .item h4 { color: var(--white); }
+.impact .item p { color: rgba(255,255,255,0.7); }
+
+/* ─── reflection ─── */
+.reflection { padding: 84px var(--pad); }
+
+/* ─── prev / next ─── */
+.case-foot-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 40px var(--pad);
+  border-top: 1px solid var(--rule);
+}
+.case-foot-nav a {
+  font-family: var(--archivo);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  transition: color .2s;
+}
+.case-foot-nav a:hover { color: var(--red); }
+.case-foot-nav .next { text-align: right; }
+
+/* ─── footer ─── */
+.foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 32px var(--pad);
+  border-top: 1px solid var(--rule);
+  font-family: var(--archivo);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--ink-3);
+}
+.foot .clock { display: inline-flex; align-items: center; gap: 10px; }
+.foot .clock .pulse { width: 6px; height: 6px; background: var(--red); border-radius: 50%; animation: blink 2s infinite; }
+@keyframes blink {
+  0%,100% { opacity: .4; transform: scale(.85); }
+  50%      { opacity: 1;  transform: scale(1.1); }
+}
+.foot .links a { color: var(--ink-3); margin-left: 18px; transition: color .2s; }
+.foot .links a:hover { color: var(--red); }
+
+/* ─── responsive ─── */
+@media (max-width: 880px) {
+  .bg-rules { display: none; }
+  .col { grid-template-columns: 1fr; gap: 14px; }
+  .col > .lead { grid-column: 1; display: flex; gap: 12px; align-items: baseline; }
+  .col > .body { grid-column: 1; }
+  .section-label { margin-top: 0; }
+  .meta { grid-template-columns: repeat(2, 1fr); }
+  .case-title { font-size: clamp(34px, 11vw, 56px); }
+  .foot { flex-direction: column; gap: 14px; align-items: flex-start; }
+}
+</style>
+</head>
+<body>
+
+<canvas id="pulse-canvas"></canvas>
+<div id="cursor"></div>
+<div class="edge"></div>
+<div class="bg-rules">
+  <div class="r r0"></div><div class="r r1"></div><div class="r r2"></div><div class="r r3"></div>
+</div>
+
+<header class="nav">
+  <a class="logo" href="index.html"><span class="sq"></span>dokiart</a>
+  <nav class="nav-links">
+    <a href="index.html">Home</a>
+    <a href="work.html" class="active">Work</a>
+    <a href="about.html">About</a>
+  </nav>
+</header>
+
+<main>
+
+<!-- ══════════════════════════════════════════════════════════
+     BLOCK 1 · OVERVIEW
+     ══════════════════════════════════════════════════════════ -->
+<section class="case-hero">
+  <span class="case-eyebrow">Case 02 <span class="red">/</span> Martech · B2B SaaS</span>
+  <h1 class="case-title">Eliminating a support queue with one design decision</h1>
+</section>
+
+<section class="case-summary col">
+  <div class="body">
+    <p>Salesflow needed to be resold under partner brands — added after the product had shipped, with limited resources and no theming infrastructure. The visible result is a logo, a name, and a few colour controls any user can set themselves. The work was finding out how little needed to change.</p>
+  </div>
+</section>
+
+<section class="meta">
+  <div class="cell"><div class="k">Role</div><div class="v">Sole product<br>designer</div></div>
+  <div class="cell"><div class="k">Domain</div><div class="v">B2B SaaS<br>outreach platform</div></div>
+  <div class="cell"><div class="k">Constraint</div><div class="v">Post-launch · limited<br>resources · no engine</div></div>
+  <div class="cell"><div class="k">Scope</div><div class="v">Shipped ·<br>in production</div></div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════
+     BLOCK 2 · THE WORK   (story beats: Problem → Insight → System)
+     ══════════════════════════════════════════════════════════ -->
+
+<!-- Problem -->
+<section class="block first col">
+  <div class="lead">
+    <span class="section-num">/ 02</span>
+    <div class="section-label">The work</div>
+  </div>
+  <div class="body">
+    <h3>The problem</h3>
+    <p>Salesflow had already shipped when the business needed it to be resellable under partner brands — partly to take load off support, partly because self-serve branding was a gap in what sales could offer. It was a revenue and positioning need, not a cosmetic one.</p>
+    <p>The obvious way to deliver it was a full theming layer: a large build, and a real risk that partners would produce broken-looking interfaces and end up contacting support anyway. The expensive solution might not even solve the problem it was meant for.</p>
+  </div>
+</section>
+
+<!-- Insight -->
+<section class="block col">
+  <div class="lead"><div class="section-label">The insight</div></div>
+  <div class="body">
+    <p>So before designing anything, I talked to support — what do partners actually ask for? The answer reframed the scope. Users didn't want to <em>theme a product</em>; they wanted it to feel like theirs.</p>
+    <p>And that feeling rested on very little: the logo, the name, the primary actions, a few accents. Everything else was structure they never noticed and never asked to change. The huge, complex problem in the original brief was mostly imaginary.</p>
+  </div>
+</section>
+
+<!-- The audit — hero artifact -->
+<figure class="audit">
+  <div class="row">
+    <div class="row-label">Colour in the product <span class="count">— audited, every surface</span></div>
+    <div class="swatches">
+      <div class="sw b1"></div><div class="sw b7"></div><div class="sw b3"></div><div class="sw b5"></div>
+      <div class="sw b9"></div><div class="sw b2"></div><div class="sw b0"></div><div class="sw b4"></div>
+      <div class="sw b8"></div><div class="sw b6"></div><div class="sw b7"></div><div class="sw b1"></div>
+      <div class="sw b9"></div><div class="sw b3"></div><div class="sw b0"></div><div class="sw b5"></div>
+      <div class="sw b2"></div><div class="sw b8"></div><div class="sw b4"></div><div class="sw b9"></div>
+      <div class="sw b7"></div><div class="sw b6"></div><div class="sw b0"></div><div class="sw b1"></div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="row-label">After the decision <span class="count">— a few move, the rest locked to neutral</span></div>
+    <div class="swatches">
+      <div class="sw var"></div><div class="sw lock"></div><div class="sw lock"></div><div class="sw lock"></div>
+      <div class="sw lock"></div><div class="sw lock"></div><div class="sw lock"></div><div class="sw lock"></div>
+      <div class="sw lock"></div><div class="sw var"></div><div class="sw lock"></div><div class="sw lock"></div>
+      <div class="sw lock"></div><div class="sw lock"></div><div class="sw lock"></div><div class="sw lock"></div>
+      <div class="sw lock"></div><div class="sw lock"></div><div class="sw var"></div><div class="sw lock"></div>
+      <div class="sw lock"></div><div class="sw lock"></div><div class="sw lock"></div><div class="sw lock"></div>
+    </div>
+  </div>
+  <figcaption>
+    <span class="cap-n">Fig. 01</span>
+    <span class="cap-t"><strong>The audit.</strong> Every colour in the product, split by one question: does it carry the brand, or structure? Only a handful carried brand. The rest does structural work — hierarchy, state, feedback — and locks to a neutral scale that always stays legible, so a partner can't break the interface with a bad palette.</span>
+  </figcaption>
+</figure>
+
+<!-- System -->
+<section class="block col">
+  <div class="lead"><div class="section-label">The system</div></div>
+  <div class="body">
+    <p>I reviewed the whole system and redesigned the few elements that would carry a partner's brand, so they could take any colour cleanly without affecting legibility or state. For partners with no designer, the system generates a coherent palette automatically — the default path produces something that looks intentional, not improvised.</p>
+    <p>The result is a control surface any user can configure on their own. It was later rebuilt into the design system as a white-label mode running alongside the standard one, on a shared structural foundation.</p>
+  </div>
+</section>
+
+<!-- The output -->
+<figure class="control">
+  <div class="panel">
+    <div class="field"><div class="l">Logo</div><div class="input">partner-logo.svg</div></div>
+    <div class="field"><div class="l">Product name</div><div class="input">Acme Outreach</div></div>
+    <div class="field">
+      <div class="l">Brand colours</div>
+      <div class="pickers">
+        <div class="pick"><div class="chip"><span class="dot"></span>Primary</div></div>
+        <div class="pick"><div class="chip"><span class="dot"></span>Ink</div></div>
+        <div class="pick"><div class="chip"><span class="dot"></span>Auto</div></div>
+      </div>
+    </div>
+  </div>
+  <figcaption>The full white-label control surface — logo, name, a few colours. The "Auto" option generates a coherent palette for users who don't want to choose.</figcaption>
+</figure>
+
+<!-- Slots for your real screenshots -->
+<figure class="figure">
+  <div class="frame"></div>
+  <figcaption>
+    <span class="cap-n">Fig. 02</span>
+    <span class="cap-t"><strong>White-label settings.</strong> [Drop the real configuration screen here.]</span>
+  </figcaption>
+</figure>
+
+<figure class="figure">
+  <div class="frame"></div>
+  <figcaption>
+    <span class="cap-n">Fig. 03</span>
+    <span class="cap-t"><strong>White-label mode in the design system.</strong> [Drop the DS screen showing the two modes here.]</span>
+  </figcaption>
+</figure>
+
+<!-- ══════════════════════════════════════════════════════════
+     BLOCK 3 · IMPACT / OUTCOME   (defensible only)
+     ══════════════════════════════════════════════════════════ -->
+<section class="impact">
+  <div class="inner col">
+    <div class="lead">
+      <span class="section-num">/ 03</span>
+      <div class="section-label">Outcome</div>
+    </div>
+    <div class="body">
+      <h3>What shipped, and what stopped happening</h3>
+      <p>White-label went live as something sales could offer, at a fraction of the cost of a theming engine.</p>
+      <div class="stack">
+        <div class="item">
+          <span class="n">—</span>
+          <div><h4>Support tickets dropped to a minimum</h4>
+          <p>The branding questions the work was meant to absorb largely stopped arriving. Partners can't misconfigure what was never left configurable.</p></div>
+        </div>
+        <div class="item">
+          <span class="n">—</span>
+          <div><h4>Built to last</h4>
+          <p>The system is transparent and easy to maintain — it's held up for years without becoming a source of edge cases.</p></div>
+        </div>
+        <div class="item">
+          <span class="n">—</span>
+          <div><h4>A reusable decision</h4>
+          <p>"Find out how little needs to change before building" became a default move on later system work.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════
+     BLOCK 4 · REFLECTION / CONCLUSION
+     ══════════════════════════════════════════════════════════ -->
+<section class="reflection col">
+  <div class="lead">
+    <span class="section-num">/ 04</span>
+    <div class="section-label">Reflection</div>
+  </div>
+  <div class="body">
+    <p>The instinct under a constraint like this is to scope the proper solution and ask for time to build it. The more useful move was to check whether the proper solution was even needed — and the answer came from a conversation with support, not from the design tool.</p>
+    <p>It's the least visually loud thing I've shipped and one of the decisions I'd most want to be asked about, because the value is in how little ended up on the screen.</p>
+  </div>
+</section>
+
+<nav class="case-foot-nav">
+  <a class="back" href="work.html">← All work</a>
+  <a class="next" href="case-leitwerk.html">Next case · Leitwerk →</a>
+</nav>
+
+</main>
+
+<footer class="foot">
+  <span>© 2026 Nina Prisniak / dokiart</span>
+  <span class="clock">
+    <span class="pulse"></span>
+    Ukraine, Kyiv · EMEA remote — <span data-clock>—</span>
+  </span>
+  <span class="links">
+    <a href="https://www.linkedin.com/in/nina-prisniak" target="_blank">LinkedIn</a>
+    <a href="https://www.behance.net/dokiart" target="_blank">Behance</a>
+  </span>
+</footer>
+
+<script>
+// ── sticky nav ──
+(function () {
+  const nav = document.querySelector('.nav');
+  if (!nav) return;
+  const onScroll = () => nav.classList.toggle('scrolled', window.scrollY > 8);
+  onScroll();
+  window.addEventListener('scroll', onScroll, { passive: true });
+})();
+
+// ── Kyiv clock ──
+function tick() {
+  const t = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Kyiv', hour: '2-digit', minute: '2-digit', hour12: false
+  }).format(new Date());
+  document.querySelectorAll('[data-clock]').forEach(el => el.textContent = t);
+}
+tick(); setInterval(tick, 15000);
+
+// ── shared click ripples ──
+window.__dokiClicks = [];
+window.addEventListener('pointerdown', e => {
+  if (e.target.closest('a, button, input, textarea, select')) return;
+  const now = performance.now();
+  window.__dokiClicks = window.__dokiClicks.filter(c => now - c.t < 2500);
+  window.__dokiClicks.push({ cx: e.clientX, cy: e.clientY, t: now });
+});
+
+// ── custom cursor ──
+(function () {
+  if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+  const cursor = document.getElementById('cursor');
+  let visible = false;
+  window.addEventListener('pointermove', e => {
+    cursor.style.left = e.clientX + 'px';
+    cursor.style.top  = e.clientY + 'px';
+    if (!visible) { cursor.style.opacity = '1'; visible = true; }
+    const interactive = e.target.closest('a, button, input, textarea, select');
+    cursor.classList.toggle('is-hover', !!interactive);
+  });
+  document.addEventListener('mouseleave', () => { cursor.style.opacity = '0'; visible = false; });
+  document.addEventListener('mouseenter', () => { cursor.style.opacity = '1'; visible = true; });
+})();
+
+// ── full-page pulse grid (static field: reacts to cursor + clicks only) ──
+(function () {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const INK_RGB = [10, 11, 13];
+  const ACC_RGB = [215, 53, 45];
+  const inkA = a => `rgba(${INK_RGB},${a})`;
+  const accA = a => `rgba(${ACC_RGB},${a})`;
+  const canvas = document.getElementById('pulse-canvas');
+  const ctx = canvas.getContext('2d');
+  let w = 0, h = 0, dpr = 1;
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    w = window.innerWidth; h = window.innerHeight;
+    canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  window.addEventListener('resize', resize); resize();
+  const M = { x: w / 2, y: h / 2, sx: w / 2, sy: h / 2 };
+  window.addEventListener('pointermove', e => { M.x = e.clientX; M.y = e.clientY; });
+  function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
+  function frame(now) {
+    requestAnimationFrame(frame);
+    M.sx += (M.x - M.sx) * 0.05; M.sy += (M.y - M.sy) * 0.05;
+    const clicks = window.__dokiClicks;
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, w, h);
+    const gap = 32, r0 = 1.15, W = 0.55, mx = M.sx, my = M.sy;
+    const ox = ((w % gap) / 2) + gap / 2, oy = ((h % gap) / 2) + gap / 2;
+    for (let y = oy; y < h; y += gap) {
+      for (let x = ox; x < w; x += gap) {
+        const dx = x - mx, dy = y - my, d = Math.sqrt(dx * dx + dy * dy);
+        let swell = 0.30;
+        const suppress = Math.exp(-d * d / (180 * 180));
+        swell *= (1 - suppress * 0.92);
+        for (const c of clicks) {
+          const cdx = x - c.cx, cdy = y - c.cy, cd = Math.sqrt(cdx * cdx + cdy * cdy);
+          const age = (now - c.t) / 1000, rr = age * 540;
+          const band = Math.exp(-Math.pow((cd - rr) / 46, 2));
+          swell += band * Math.max(0, 1 - age / 2.0) * 1.5;
+        }
+        const r = r0 * (1 + swell * 3.0) * W;
+        if (r < 0.22) continue;
+        const a = clamp(0.12 + swell * 0.6, 0, 1);
+        ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832);
+        ctx.fillStyle = swell > 0.62 ? accA(a) : inkA(a * 0.5); ctx.fill();
+      }
+    }
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
